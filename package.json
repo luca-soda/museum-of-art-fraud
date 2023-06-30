@@ -28,5 +28,8 @@
   },
   "bundledDependencies": [
     "eth-connect"
+  ],
+  "bundleDependencies": [
+    "eth-connect"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "display": {
-    "title": "DCL Scene",
+    "title": "Musem of Art Fraud",
     "description": "My new Decentraland project",
     "navmapThumbnail": "images/scene-thumbnail.png",
     "favicon": "favicon_asset"
@@ -13,8 +13,8 @@
   "main": "bin/game.js",
   "tags": [],
   "scene": {
-    "parcels": ["0,0"],
-    "base": "0,0"
+    "parcels": ["108,-115"],
+    "base": "108,-115"
   },
   "spawnPoints": [
     {

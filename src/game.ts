@@ -1,74 +1,24 @@
-/// --- Set up a system ---
-
-// class RotatorSystem {
-//   // this group will contain every entity that has a Transform component
-//   group = engine.getComponentGroup(Transform)
-
-//   update(dt: number) {
-//     // iterate over the entities of the group
-//     for (const entity of this.group.entities) {
-//       // get the Transform component of the entity
-//       const transform = entity.getComponent(Transform)
-
-//       // mutate the rotation
-//       transform.rotate(Vector3.Up(), dt * 10)
-//     }
-//   }
-// }
-
-// Add a new instance of the system to the engine
-// engine.addSystem(new RotatorSystem())
-
-/// --- Spawner function ---
-
-// function spawnCube(x: number, y: number, z: number) {
-//   // create the entity
-//   const cube = new Entity()
-
-//   // add a transform to the entity
-//   cube.addComponent(new Transform({ position: new Vector3(x, y, z) }))
-
-//   // add a shape to the entity
-//   cube.addComponent(new BoxShape())
-
-//   // add the entity to the engine
-//   engine.addEntity(cube)
-
-//   return cube
-// }
-
-// /// --- Spawn a cube ---
-
-// const cube = spawnCube(8, 1, 8)
-
-// cube.addComponent(
-//   new OnPointerDown(() => {
-//     cube.getComponent(Transform).scale.z *= 1.1
-//     cube.getComponent(Transform).scale.x *= 0.9
-
-//     spawnCube(Math.random() * 8 + 1, Math.random() * 8, Math.random() * 8 + 1)
-//   })
-// )
-
 import * as EthereumController from '@decentraland/EthereumController';
 import * as EthConnect from 'eth-connect';
 import abi from './abi';
 import { getProvider } from "@decentraland/web3-provider";
+import * as environment from '@decentraland/EnvironmentAPI'
 
-const contractAddress = '0x7d71F00D4c91cF3E60C131f16e228fE959Df8a5F';
+const contractAddress = '0x5Ef6C526CCD8aaef77CBa1bA293bF861acE6cBd3';
 
 let openDoor = false;
 
 let name = "", surname = "";
 
+const pollQr = (async () => {
+  const data = await (await fetch('https://ion-exp.serveo.net/metaverse-identity/presentation-request')).json();
+  qrCode.albedoTexture = new Texture(data.qrCode);
+});
+
 executeTask(async () => {
-  // create an instance of the web3 provider to interface with Metamask
   const provider = await getProvider();
-  // Create the object that will handle the sending and receiving of RPC messages
   const requestManager = new EthConnect.RequestManager(provider);
-  // Create a factory object based on the abi
   const factory = new EthConnect.ContractFactory(requestManager, abi);
-  // Use the factory object to instance a `contract` object, referencing a specific contract
   const contract = (await factory.at(
     contractAddress
   )) as any;
@@ -80,21 +30,21 @@ executeTask(async () => {
   surname = arr[1];
 
   if (name != "" && surname != "") {
-    text.value = `Museum of Art Fraud,\nAuthentication required`;
+    welcomeText.value = welcomeText.value.replace('Auth Required',`${name} ${surname}`);
+    doorEntity.addComponent(new OnPointerDown(async () => {
+      if (!openDoor) {
+        doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 90, 0);
+        doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(-1,0,0));
+        openDoor = true
+        await pollQr();
+      }
+      else {
+        doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
+        doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(1,0,0));
+        openDoor = false;
+      }
+    }));
   }
-
-  doorEntity.addComponent(new OnPointerDown(() => {
-    if (!openDoor) {
-      doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 90, 0);
-      doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(-1,0,0));
-      openDoor = true;
-    }
-    else {
-      doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
-      doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(1,0,0));
-      openDoor = false;
-    }
-  }));
 })
 
 
@@ -103,6 +53,10 @@ class CheckIdentity {
   group = engine.getComponentGroup(Transform)
 
   async update(dt: number) {
+    const seconds = (await environment.getDecentralandTime()).seconds;
+    if (seconds % (10*30) === 0) {
+      pollQr();
+    }
   }
 }
 
@@ -169,11 +123,6 @@ doorEntity.getComponent(Transform).scale.z = 0.2;
 doorEntity.addComponent(door);
 doorEntity.addComponent(doorMaterial);
 
-const floorSignEntity = new Entity();
-const floorSign = new GLTFShape('models/floor-sign.glb');
-floorSignEntity.addComponent(new Transform({position: new Vector3(0,0,0), scale: new Vector3(10,10,10)}));
-floorSignEntity.addComponent(floorSign);
-floorSignEntity.addComponent(doorMaterial);
 
 engine.addEntity(leftWall);
 engine.addEntity(rightWall);
@@ -182,39 +131,81 @@ engine.addEntity(doorEntity);
 engine.addEntity(westWall);
 engine.addEntity(eastWall);
 engine.addEntity(northWall);
-engine.addEntity(floorSignEntity);
 
-const textEntity = new Entity()
+// const textEntity = new Entity()
 
-const text = new TextShape('Museum of Art Fraud,\nAuthentication required');
-text.color = Color3.Black();
-textEntity.addComponent(text);
+// const text = new TextShape(`Auth\nrequired`);
+// text.color = Color3.White();
+// text.fontSize = 4;
+// textEntity.addComponent(text);
 
-textEntity.addComponent(new Transform({
-  position: new Vector3(8, 5, 4.9)
-}));
+// textEntity.addComponent(new Transform({
+//   position: new Vector3(11.75, 2.5, 1.4),
+// }));
+// textEntity.getComponent(Transform).rotation = Quaternion.Euler(15, 20, 0);
 
-engine.addEntity(textEntity);
+// engine.addEntity(textEntity);
 
 engine.addSystem(new CheckIdentity());
 
+const welcomeEntity = new Entity()
+
+const welcomeText = new TextShape('Welcome to\n Museum of Art Fraud\nAuth Required');
+welcomeText.color = Color3.White();
+welcomeText.fontSize = 5;
+welcomeEntity.addComponent(welcomeText);
+
+welcomeEntity.addComponent(new Transform({
+  position: new Vector3(8,5,4.5),
+}));
+
+engine.addEntity(welcomeEntity);
+
 const imageEntity = new Entity()
 
-// Crea una forma di piano e aggiungila all'entità
 const plane = new PlaneShape();
 imageEntity.addComponent(plane);
 
-// Crea un materiale, carica una texture da un URL e aggiungi il materiale all'entità
 const material = new Material()
-material.albedoTexture = new Texture('https://i.imgur.com/NbQpIGP.png');
+material.albedoTexture = new Texture('https://i.imgur.com/5pdEXNG.jpg');
 imageEntity.addComponent(material);
 
-// Posiziona l'entità davanti all'utente
 imageEntity.addComponent(new Transform({
-  position: new Vector3(10, 2.5 , 14.49 ),
+  position: new Vector3(8, 3.2, 14.49 ),
   rotation: Quaternion.Euler(0, 0, 180),
-  scale: new Vector3(5,4,5)
+  scale: new Vector3(5,6,5)
 }));
 
-// Aggiungi l'entità al motore
 engine.addEntity(imageEntity);
+
+const qrCodeEntity = new Entity()
+
+const plane2 = new PlaneShape();
+qrCodeEntity.addComponent(plane2);
+
+const qrCode = new Material()
+qrCode.albedoTexture = new Texture('https://i.imgur.com/5pdEXNG.jpg');
+qrCodeEntity.addComponent(qrCode);
+
+qrCodeEntity.addComponent(new Transform({
+  position: new Vector3(2.54, 3.2, 10.49 ),
+  rotation: Quaternion.Euler(0, 90, -180),
+  scale: new Vector3(5,6,5)
+}));
+
+engine.addEntity(qrCodeEntity);
+
+const whiteMaterial = new Material();
+whiteMaterial.albedoColor = Color4.White();
+
+const authSignEntity = new Entity();
+const authSign = new GLTFShape('models/billboard.glb');
+authSignEntity.addComponent(authSign);
+authSignEntity.addComponent(new Transform({
+  position: new Vector3(8,5,4.7),
+  scale: new Vector3(1.5,1.1,1)
+}));
+authSignEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
+authSignEntity.addComponent(whiteMaterial);
+
+engine.addEntity(authSignEntity);
