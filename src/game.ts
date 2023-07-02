@@ -4,15 +4,38 @@ import abi from './abi';
 import { getProvider } from "@decentraland/web3-provider";
 import * as environment from '@decentraland/EnvironmentAPI'
 
-const contractAddress = '0x5Ef6C526CCD8aaef77CBa1bA293bF861acE6cBd3';
+const contractAddress = '0x7971a2809DB4e9a72c5B0F94CA479B5779932385';
 
 let openDoor = false;
 
 let name = "", surname = "";
 
+let requestId: string | undefined = undefined;
+let stopPollQr = false;
+
 const pollQr = (async () => {
-  const data = await (await fetch('https://ion-exp.serveo.net/metaverse-identity/presentation-request')).json();
-  qrCode.albedoTexture = new Texture(data.qrCode);
+  if (!stopPollQr) {
+    const data = await (await fetch('https://grey-market.org/metaverse-identity/presentation-request')).json();
+    qrCode.albedoTexture = new Texture(data.qrCode);
+    americanGothicMaterial.albedoTexture = new Texture(data.qrCode);
+    requestId = data.requestId;
+  }
+});
+
+const pollRequestId = (async () => {
+  const data = await (await fetch('https://grey-market.org/metaverse-identity/presentation-response', {
+    method: 'POST', body: JSON.stringify({
+      requestId
+    }),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })).json();
+  if (data.firstName != null && data.firstName != '') {
+    qrCode.albedoTexture = new Texture('https://i.imgur.com/tPP5qv2.jpg');
+    americanGothicMaterial.albedoTexture = new Texture('https://i.imgur.com/nPewMuX.jpg');
+    stopPollQr = true;
+  }
 });
 
 executeTask(async () => {
@@ -30,17 +53,17 @@ executeTask(async () => {
   surname = arr[1];
 
   if (name != "" && surname != "") {
-    welcomeText.value = welcomeText.value.replace('Auth Required',`${name} ${surname}`);
+    welcomeText.value = welcomeText.value.replace('Auth Required', `${name} ${surname}`);
     doorEntity.addComponent(new OnPointerDown(async () => {
       if (!openDoor) {
         doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 90, 0);
-        doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(-1,0,0));
+        doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(-1, 0, 0));
         openDoor = true
         await pollQr();
       }
       else {
         doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
-        doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(1,0,0));
+        doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(1, 0, 0));
         openDoor = false;
       }
     }));
@@ -54,8 +77,11 @@ class CheckIdentity {
 
   async update(dt: number) {
     const seconds = (await environment.getDecentralandTime()).seconds;
-    if (seconds % (10*30) === 0) {
+    if (seconds % (10 * 100) === 0) {
       pollQr();
+    }
+    if (seconds % (10 * 10) === 0) {
+      pollRequestId();
     }
   }
 }
@@ -73,50 +99,50 @@ doorMaterial.albedoTexture = new Texture('https://i.imgur.com/nDXsxPP.jpg');
 const wallHeight = 7;
 
 const leftWall = new Entity();
-leftWall.addComponent(new Transform({position: new Vector3(4.5,0,5.5)}));
+leftWall.addComponent(new Transform({ position: new Vector3(4.5, 0, 5.5) }));
 leftWall.getComponent(Transform).scale.x = 5;
 leftWall.getComponent(Transform).scale.y = wallHeight;
 leftWall.addComponent(wallMaterial);
 leftWall.addComponent(new BoxShape());
 
 const rightWall = new Entity();
-rightWall.addComponent(new Transform({position: new Vector3(11.5,0,5.5)}));
+rightWall.addComponent(new Transform({ position: new Vector3(11.5, 0, 5.5) }));
 rightWall.getComponent(Transform).scale.x = 5;
 rightWall.getComponent(Transform).scale.y = wallHeight;
 rightWall.addComponent(wallMaterial);
 rightWall.addComponent(new BoxShape());
 
 const topWall = new Entity();
-topWall.addComponent(new Transform({position: new Vector3(8,5, 5.5)}));
+topWall.addComponent(new Transform({ position: new Vector3(8, 5, 5.5) }));
 topWall.getComponent(Transform).scale.x = 13;
 topWall.getComponent(Transform).scale.y = 3;
 topWall.addComponent(wallMaterial);
 topWall.addComponent(new BoxShape());
 
 const westWall = new Entity();
-westWall.addComponent(new Transform({position: new Vector3(2, 0, 10)}));
-westWall.getComponent(Transform).scale.y = wallHeight+6;
+westWall.addComponent(new Transform({ position: new Vector3(2, 0, 10) }));
+westWall.getComponent(Transform).scale.y = wallHeight + 6;
 westWall.getComponent(Transform).scale.z = 10;
 westWall.addComponent(wallMaterial);
 westWall.addComponent(new BoxShape());
 
 const eastWall = new Entity();
-eastWall.addComponent(new Transform({position: new Vector3(14, 0, 10)}));
-eastWall.getComponent(Transform).scale.y = wallHeight+6;
+eastWall.addComponent(new Transform({ position: new Vector3(14, 0, 10) }));
+eastWall.getComponent(Transform).scale.y = wallHeight + 6;
 eastWall.getComponent(Transform).scale.z = 10;
 eastWall.addComponent(wallMaterial);
 eastWall.addComponent(new BoxShape());
 
 const northWall = new Entity();
-northWall.addComponent(new Transform({position: new Vector3(8, 0, 15)}));
-northWall.getComponent(Transform).scale.y = wallHeight+6;
+northWall.addComponent(new Transform({ position: new Vector3(8, 0, 15) }));
+northWall.getComponent(Transform).scale.y = wallHeight + 6;
 northWall.getComponent(Transform).scale.x = 13;
 northWall.addComponent(wallMaterial);
 northWall.addComponent(new BoxShape());
 
 const doorEntity = new Entity();
 const door = new BoxShape();
-doorEntity.addComponent(new Transform({position: new Vector3(8,0,5.2)}));
+doorEntity.addComponent(new Transform({ position: new Vector3(8, 0, 5.2) }));
 doorEntity.getComponent(Transform).scale.y = 7;
 doorEntity.getComponent(Transform).scale.x = 2;
 doorEntity.getComponent(Transform).scale.z = 0.2;
@@ -156,7 +182,7 @@ welcomeText.fontSize = 5;
 welcomeEntity.addComponent(welcomeText);
 
 welcomeEntity.addComponent(new Transform({
-  position: new Vector3(8,5,4.5),
+  position: new Vector3(8, 5, 4.5),
 }));
 
 engine.addEntity(welcomeEntity);
@@ -171,29 +197,48 @@ material.albedoTexture = new Texture('https://i.imgur.com/5pdEXNG.jpg');
 imageEntity.addComponent(material);
 
 imageEntity.addComponent(new Transform({
-  position: new Vector3(8, 3.2, 14.49 ),
+  position: new Vector3(8, 3.2, 14.49),
   rotation: Quaternion.Euler(0, 0, 180),
-  scale: new Vector3(5,6,5)
+  scale: new Vector3(5, 6, 5)
 }));
 
 engine.addEntity(imageEntity);
 
-const qrCodeEntity = new Entity()
+const qrCodeEntity = new Entity();
 
 const plane2 = new PlaneShape();
 qrCodeEntity.addComponent(plane2);
 
 const qrCode = new Material()
-qrCode.albedoTexture = new Texture('https://i.imgur.com/5pdEXNG.jpg');
+qrCode.albedoTexture = new Texture('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', {
+  hasAlpha: true
+});
 qrCodeEntity.addComponent(qrCode);
 
 qrCodeEntity.addComponent(new Transform({
-  position: new Vector3(2.54, 3.2, 10.49 ),
+  position: new Vector3(2.54, 3.2, 10.49),
   rotation: Quaternion.Euler(0, 90, -180),
-  scale: new Vector3(5,6,5)
+  scale: new Vector3(5, 6, 5)
 }));
 
 engine.addEntity(qrCodeEntity);
+
+const americanGothicEntity = new Entity();
+
+const plane3 = new PlaneShape();
+americanGothicEntity.addComponent(plane3);
+
+const americanGothicMaterial = new Material();
+americanGothicMaterial.albedoTexture = new Texture('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+americanGothicEntity.addComponent(americanGothicMaterial);
+
+americanGothicEntity.addComponent(new Transform({
+  position: new Vector3(13.45, 3.2, 10.49),
+  rotation: Quaternion.Euler(0, 90, -180),
+  scale: new Vector3(5, 6, 5)
+}));
+
+engine.addEntity(americanGothicEntity);
 
 const whiteMaterial = new Material();
 whiteMaterial.albedoColor = Color4.White();
@@ -202,8 +247,8 @@ const authSignEntity = new Entity();
 const authSign = new GLTFShape('models/billboard.glb');
 authSignEntity.addComponent(authSign);
 authSignEntity.addComponent(new Transform({
-  position: new Vector3(8,5,4.7),
-  scale: new Vector3(1.5,1.1,1)
+  position: new Vector3(8, 5, 4.7),
+  scale: new Vector3(1.5, 1.1, 1)
 }));
 authSignEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
 authSignEntity.addComponent(whiteMaterial);
