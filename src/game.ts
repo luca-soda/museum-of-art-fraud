@@ -2,7 +2,7 @@ import * as EthereumController from '@decentraland/EthereumController';
 import * as EthConnect from 'eth-connect';
 import abi from './abi';
 import { getProvider } from "@decentraland/web3-provider";
-import * as environment from '@decentraland/EnvironmentAPI'
+import * as environment from '@decentraland/EnvironmentAPI';
 
 const contractAddress = '0x7971a2809DB4e9a72c5B0F94CA479B5779932385';
 
@@ -39,18 +39,28 @@ const pollRequestId = (async () => {
 });
 
 executeTask(async () => {
-  const provider = await getProvider();
-  const requestManager = new EthConnect.RequestManager(provider);
-  const factory = new EthConnect.ContractFactory(requestManager, abi);
-  const contract = (await factory.at(
-    contractAddress
-  )) as any;
+  // const provider = await getProvider();
+  // const requestManager = new EthConnect.RequestManager(provider);
+  // const factory = new EthConnect.ContractFactory(requestManager, abi);
+  // const contract = (await factory.at(
+  //   contractAddress
+  // )) as any;
 
   const address = await EthereumController.getUserAccount();
 
-  const arr = await contract.identity(address);
-  name = arr[0];
-  surname = arr[1];
+  // const [name, surname] = await contract.identity(address);
+
+  const result = await (await fetch('https://identity-provider.delightfulriver-e0d8cb6b.westeurope.azurecontainerapps.io/api/identity', {
+    method: 'POST',
+    body: JSON.stringify({
+      address
+    }),
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })).json();
+
+  const { name, surname } = result;
 
   if (name != "" && surname != "") {
     welcomeText.value = welcomeText.value.replace('Auth Required', `${name} ${surname}`);
