@@ -8,33 +8,18 @@ const contractAddress = '0x7971a2809DB4e9a72c5B0F94CA479B5779932385';
 
 let openDoor = false;
 
-let name = "", surname = "";
+// const pollQr = (async () => {
+//   const data = await (await fetch(`https://issuer-verifier-express.delightfulriver-e0d8cb6b.westeurope.azurecontainerapps.io/verifierQrCode`)).json();
+//   qrCode.albedoTexture = new Texture(data.qrCode);
 
-let requestId: string | undefined = undefined;
-let stopPollQr = false;
-
-const pollQr = (async () => {
-  if (!stopPollQr) {
-    const data = await (await fetch('https://grey-market.org/metaverse-identity/presentation-request')).json();
-    qrCode.albedoTexture = new Texture(data.qrCode);
-    americanGothicMaterial.albedoTexture = new Texture(data.qrCode);
-    requestId = data.requestId;
-  }
-});
+// });
 
 const pollRequestId = (async () => {
-  const data = await (await fetch('https://grey-market.org/metaverse-identity/presentation-response', {
-    method: 'POST', body: JSON.stringify({
-      requestId
-    }),
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  })).json();
-  if (data.firstName != null && data.firstName != '') {
+  const address = await EthereumController.getUserAccount();
+  const data = await (await fetch(`https://issuer-verifier-express.delightfulriver-e0d8cb6b.westeurope.azurecontainerapps.io/isVerified?address=${address}`)).json();
+  if (data.verified) {
     qrCode.albedoTexture = new Texture('https://i.imgur.com/tPP5qv2.jpg');
     americanGothicMaterial.albedoTexture = new Texture('https://i.imgur.com/nPewMuX.jpg');
-    stopPollQr = true;
   }
 });
 
@@ -60,16 +45,16 @@ executeTask(async () => {
     }
   })).json();
 
-  const { name, surname } = result;
+  const { name } = result;
 
-  if (name != "" && surname != "") {
-    welcomeText.value = welcomeText.value.replace('Auth Required', `${name} ${surname}`);
+  if (name != "") {
+    welcomeText.value = welcomeText.value.replace('Auth Required', `${name}`);
     doorEntity.addComponent(new OnPointerDown(async () => {
       if (!openDoor) {
         doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 90, 0);
         doorEntity.getComponent(Transform).position = doorEntity.getComponent(Transform).position.add(new Vector3(-1, 0, 0));
         openDoor = true
-        await pollQr();
+        // await pollQr();
       }
       else {
         doorEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
@@ -87,9 +72,9 @@ class CheckIdentity {
 
   async update(dt: number) {
     const seconds = (await environment.getDecentralandTime()).seconds;
-    if (seconds % (10 * 100) === 0) {
-      pollQr();
-    }
+    // if (seconds % (10 * 100) === 0) {
+    //   pollQr();
+    // }
     if (seconds % (10 * 10) === 0) {
       pollRequestId();
     }
@@ -168,20 +153,6 @@ engine.addEntity(westWall);
 engine.addEntity(eastWall);
 engine.addEntity(northWall);
 
-// const textEntity = new Entity()
-
-// const text = new TextShape(`Auth\nrequired`);
-// text.color = Color3.White();
-// text.fontSize = 4;
-// textEntity.addComponent(text);
-
-// textEntity.addComponent(new Transform({
-//   position: new Vector3(11.75, 2.5, 1.4),
-// }));
-// textEntity.getComponent(Transform).rotation = Quaternion.Euler(15, 20, 0);
-
-// engine.addEntity(textEntity);
-
 engine.addSystem(new CheckIdentity());
 
 const welcomeEntity = new Entity()
@@ -220,14 +191,15 @@ const plane2 = new PlaneShape();
 qrCodeEntity.addComponent(plane2);
 
 const qrCode = new Material()
-qrCode.albedoTexture = new Texture('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', {
-  hasAlpha: true
-});
+qrCode.albedoTexture = new Texture('https://i.imgur.com/IjsozLk.png');
 qrCodeEntity.addComponent(qrCode);
+qrCode.castShadows = false;
+qrCode.metallic = 0;
+qrCode.albedoColor = Color4.White();
 
 qrCodeEntity.addComponent(new Transform({
   position: new Vector3(2.54, 3.2, 10.49),
-  rotation: Quaternion.Euler(0, 90, -180),
+  rotation: Quaternion.Euler(0, -90, 180),
   scale: new Vector3(5, 6, 5)
 }));
 
@@ -239,7 +211,7 @@ const plane3 = new PlaneShape();
 americanGothicEntity.addComponent(plane3);
 
 const americanGothicMaterial = new Material();
-americanGothicMaterial.albedoTexture = new Texture('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=');
+americanGothicMaterial.albedoTexture = new Texture('https://i.imgur.com/IjsozLk.png');
 americanGothicEntity.addComponent(americanGothicMaterial);
 
 americanGothicEntity.addComponent(new Transform({
@@ -264,3 +236,18 @@ authSignEntity.getComponent(Transform).rotation = Quaternion.Euler(0, 180, 0);
 authSignEntity.addComponent(whiteMaterial);
 
 engine.addEntity(authSignEntity);
+
+
+const button = new GLTFShape('models/button.glb');
+const buttonEntity = new Entity();
+buttonEntity.addComponent(button);
+buttonEntity.addComponent(new Transform({
+  position: new Vector3(4, 3, 15),
+  scale: new Vector3(0.8, 0.8, 0.8)
+}));
+buttonEntity.getComponent(Transform).rotation = Quaternion.Euler(90, 0, 0);
+buttonEntity.addComponent(new OnPointerDown(async () => {
+  openExternalURL(`https://identity-provider.delightfulriver-e0d8cb6b.westeurope.azurecontainerapps.io/verifier?URL=aHR0cHM6Ly9pc3N1ZXItdmVyaWZpZXItZXhwcmVzcy5kZWxpZ2h0ZnVscml2ZXItZTBkOGNiNmIud2VzdGV1cm9wZS5henVyZWNvbnRhaW5lcmFwcHMuaW8vdmVyaWZpZXI&name=Museum%20of%20Art%20Fraud`);
+}));
+
+engine.addEntity(buttonEntity);
